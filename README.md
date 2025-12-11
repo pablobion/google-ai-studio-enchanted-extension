@@ -1,20 +1,43 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# 🚀 Queue for Google AI Studio Chat  
+Add a simple and powerful **prompt queue system** to Google AI Studio.  
+Organize your prompts, send them in sequence automatically, and enjoy a smoother workflow. ✨
 
-# Run and deploy your AI Studio app
+🔗 **Chrome Web Store:**  
+https://chromewebstore.google.com/detail/panfjafdjmlakidpdpehglfgkgmgoakn?utm_source=item-share-cb
 
-This contains everything you need to run your app locally.
+---
 
-View your app in AI Studio: https://ai.studio/apps/drive/1kmJjH7LTIcMFTobBvuvlYVLIa15jFMrw
+## 🌟 Overview
 
-## Run Locally
+**Queue for Google AI Studio Chat** enhances the Google AI Studio experience by allowing users to:
 
-**Prerequisites:**  Node.js
+- ➕ Add multiple prompts to a queue  
+- ▶️ Send them automatically in sequence  
+- ⚡ Improve workflow efficiency  
+- 🧩 Use AI Studio without interruptions  
+- 💡 Keep the interface clean and easy to use  
 
+This extension focuses on **a single purpose**: providing a reliable prompt queue system for Google AI Studio.
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+---
+
+## 🛠️ How It Works
+
+1. Write your prompt in Google AI Studio.  
+2. Click **“Add to Queue”**.  
+3. Add as many prompts as you need.  
+4. Press **“Start Queue”** to send them one by one automatically.  
+
+The extension handles the timing, message sending, and queue processing for you.
+
+---
+
+## 📦 Installation
+
+### From the Chrome Web Store (recommended)  
+👉 https://chromewebstore.google.com/detail/panfjafdjmlakidpdpehglfgkgmgoakn?utm_source=item-share-cb
+
+### From source (manual install)
+1. Clone this repository  
+   ```bash
+   git clone https://github.com/your-user/your-repo.git
