@@ -1,0 +1,5 @@
+{
+  "name": "AI Studio Enchanted",
+  "description": "A modern, enhanced version of the AI Studio interface featuring a message queue system, allowing users to batch multiple prompts that execute sequentially.",
+  "requestFramePermissions": []
+}
