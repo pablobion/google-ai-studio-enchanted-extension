@@ -3,9 +3,6 @@
   "name": "AI Studio Enchanted Queue",
   "version": "1.0",
   "description": "Adds a smart message queue to Google AI Studio.",
-  "host_permissions": [
-    "https://aistudio.google.com/*"
-  ],
   "content_scripts": [
     {
       "matches": ["https://aistudio.google.com/*"],
