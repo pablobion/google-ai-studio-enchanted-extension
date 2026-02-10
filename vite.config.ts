@@ -8,7 +8,7 @@ const copyStaticFiles = () => {
   return {
     name: 'copy-static-files',
     closeBundle() {
-      const filesToCopy = ['manifest.json', 'content.js', 'styles.css'];
+      const filesToCopy = ['manifest.json', 'content.js', 'styles.css', 'icon.png'];
       const outDir = path.resolve(__dirname, 'dist');
 
       filesToCopy.forEach(file => {
@@ -50,8 +50,6 @@ export default defineConfig(({ mode }) => {
       },
       // Garante que os assets sejam copiados corretamente
       assetsDir: 'assets',
-      // Não minificar demais para facilitar debug se necessário
-      minify: 'terser',
     },
   };
 });

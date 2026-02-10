@@ -1,8 +1,11 @@
 {
   "manifest_version": 3,
   "name": "Google AI Studio Enchanted Queue",
-  "version": "1.0",
+  "version": "1.1",
   "description": "Adds a smart message queue to Google AI Studio.",
+  "icons": {
+    "128": "icon.png"
+  },
   "content_scripts": [
     {
       "matches": ["https://aistudio.google.com/*"],
@@ -13,5 +16,6 @@
   ],
   "action": {
     "default_popup": "index.html"
-  }
+  },
+  "permissions": ["storage"]
 }
