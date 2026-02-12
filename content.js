@@ -14,17 +14,44 @@
         isLoopRunning: false,
         editingId: null,
         lastProcessedItemId: null,
-        questionMode: false
+        questionMode: false,
+        extensionEnabled: true,
+        commands: []
     };
 
-    // Load initial queue from storage
-    chrome.storage.local.get(['enchantedQueue'], (result) => {
+    // Load initial queue and settings from storage
+    chrome.storage.local.get(['enchantedQueue', 'extensionEnabled', 'focusModeEnabled', 'enchantedCommands'], (result) => {
+        if (result.extensionEnabled !== undefined) {
+            state.extensionEnabled = result.extensionEnabled;
+        }
+        const defaultCommands = [
+            { name: '/refactor', prompt: 'Refactor this code to be more efficient and follow best practices.' },
+            { name: '/fix', prompt: 'Find and fix the bugs in this code snippet.' }
+        ];
+        state.commands = result.enchantedCommands || defaultCommands;
+
         if (result.enchantedQueue) {
             state.queue = result.enchantedQueue;
             renderQueue();
-            if (state.queue.length > 0 && !state.isLoopRunning) {
+            if (state.queue.length > 0 && !state.isLoopRunning && state.extensionEnabled) {
                 startProcessingLoop();
             }
+        }
+    });
+
+    // Listen for storage changes (On/Off toggle)
+    chrome.storage.onChanged.addListener((changes) => {
+        if (changes.extensionEnabled) {
+            state.extensionEnabled = changes.extensionEnabled.newValue;
+            console.log("✨ Extension " + (state.extensionEnabled ? "Enabled" : "Disabled"));
+            if (!state.extensionEnabled) {
+                removeUI();
+            } else {
+                init();
+            }
+        }
+        if (changes.enchantedCommands) {
+            state.commands = changes.enchantedCommands.newValue || [];
         }
     });
 
@@ -49,29 +76,19 @@
 
     const ADD_TO_QUEUE_BTN_ID = 'enchanted-add-to-queue-btn';
     const QUESTION_MODE_BTN_ID = 'enchanted-question-mode-btn';
+    const COMMAND_MODE_BTN_ID = 'enchanted-command-mode-btn';
+    const COMMAND_MANAGER_BTN_ID = 'enchanted-command-manager-btn';
     const COFFEE_BTN_ID = 'enchanted-coffee-btn';
     const COFFEE_URL = 'https://buymeacoffee.com/bionlabs';
-    const QUESTION_PROMPT = `[SYSTEM] The user has enabled "QUESTIONS ONLY" mode.
+    const QUESTION_PROMPT_PREFIX = `This is a question only, do not provide any code in your response. Answer it in the same language as the following message: `;
 
-MANDATORY INSTRUCTIONS:
-1. ONLY answer questions or conceptual doubts.
-2. DO NOT GENERATE CODE (no code blocks), unless it is ABSOLUTELY necessary for a minimal 1-2 line example.
-3. Focus on theoretical, educational, and direct explanations.
-4. If the user asks to generate something, politely decline and remind them that this mode is for questions.
-
----
-User Message:
-`;
 
     // --- ICONS SVG ---
     const Icons = {
-        trash: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>`,
-        minimize: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></svg>`,
-        close: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`,
-        sparkles: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>`,
-        edit: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>`,
         check: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`,
-        send: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4L22 2Z"/><path d="M22 2 11 13"/></svg>`
+        send: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4L22 2Z"/><path d="M22 2 11 13"/></svg>`,
+        plusCircle: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>`,
+        drag: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/></svg>`
     };
 
     // --- UI CREATION (queue bar above main chat input) ---
@@ -134,6 +151,8 @@ User Message:
         renderQueue();
     };
 
+    let draggedItemIdx = null;
+
     const renderQueue = () => {
         const panel = document.getElementById('enchanted-panel');
         const list = document.getElementById('enchanted-list');
@@ -151,10 +170,11 @@ User Message:
             const hasImages = item.images && item.images.length > 0;
             const el = document.createElement('div');
             el.className = 'enchanted-item';
+            el.draggable = true;
+            el.dataset.index = index;
 
             let imagesHtml = '';
             if (hasImages) {
-                // Show only the first image as a thumbnail per line
                 imagesHtml = `<div class="enchanted-item-thumbnail-container">
                     <img src="${item.images[0]}" class="enchanted-item-thumbnail">
                     ${item.images.length > 1 ? `<span class="enchanted-item-more-count">+${item.images.length - 1}</span>` : ''}
@@ -162,20 +182,57 @@ User Message:
             }
 
             el.innerHTML = `
+                <div class="enchanted-item-drag-handle" style="cursor: grab; display: flex; align-items: center; color: rgba(255,255,255,0.25);">
+                    ${Icons.drag}
+                </div>
                 <span class="enchanted-item-number">${index + 1}.</span>
                 ${imagesHtml}
                 <span class="enchanted-item-text">
                     ${hasImages ? '<span style="color: #eab308; margin-right: 4px;" title="Contém imagem">🖼️</span>' : ''}
-                    ${item.isQuestionMode ? '<span style="color: #a855f7; font-weight: bold; margin-right: 4px;" title="Modo Dúvida Ativo">[?]</span>' : ''}
-                    ${escapeHtml(item.originalText || item.text) || (hasImages ? '<i style="opacity: 0.5">Apenas imagem</i>' : '')}
+                    ${item.isQuestionMode ? '<span style="color: #a855f7; font-weight: bold; margin-right: 4px;" title="Question Mode Active">[?]</span>' : ''}
+                    ${escapeHtml(item.originalText || item.text) || (hasImages ? '<i style="opacity: 0.5">Image only</i>' : '')}
                 </span>
-                <button type="button" class="enchanted-item-remove" data-id="${item.id}" title="Remover">×</button>
+                <button type="button" class="enchanted-item-remove" data-id="${item.id}" title="Remove">×</button>
             `;
+
+            // Drag Events
+            el.ondragstart = (e) => {
+                draggedItemIdx = index;
+                el.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+            };
+
+            el.ondragend = () => {
+                el.classList.remove('dragging');
+                draggedItemIdx = null;
+                document.querySelectorAll('.enchanted-item').forEach(i => i.classList.remove('drag-over'));
+            };
+
+            el.ondragover = (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                return false;
+            };
+
+            el.ondragenter = () => el.classList.add('drag-over');
+            el.ondragleave = () => el.classList.remove('drag-over');
+
+            el.ondrop = (e) => {
+                e.preventDefault();
+                const targetIdx = parseInt(el.dataset.index);
+                if (draggedItemIdx !== null && draggedItemIdx !== targetIdx) {
+                    const itemToMove = state.queue.splice(draggedItemIdx, 1)[0];
+                    state.queue.splice(targetIdx, 0, itemToMove);
+                    syncStorage();
+                    renderQueue();
+                }
+                return false;
+            };
+
             el.querySelector('.enchanted-item-remove').onclick = (e) => {
                 e.stopPropagation();
                 state.queue = state.queue.filter(i => i.id !== item.id);
                 syncStorage();
-                if (state.editingId === item.id) state.editingId = null;
                 renderQueue();
             };
             list.appendChild(el);
@@ -209,7 +266,7 @@ User Message:
 
         let finalText = text;
         if (state.questionMode) {
-            finalText = QUESTION_PROMPT + text;
+            finalText = QUESTION_PROMPT_PREFIX + text;
         }
 
         const item = {
@@ -234,10 +291,250 @@ User Message:
     };
 
     // Inject the "Add to queue" button as a sibling to the LEFT of the send button
-    // --- CORE INJECTION LOGIC ---
+
+    const showCommandManagerModal = () => {
+        let modal = document.getElementById('enchanted-command-manager-modal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'enchanted-command-manager-modal';
+            document.body.appendChild(modal);
+        }
+
+        const renderManagerList = () => {
+            const listContainer = modal.querySelector('.enchanted-manager-list');
+            if (!listContainer) return;
+            listContainer.innerHTML = '';
+
+            if (state.commands.length === 0) {
+                listContainer.innerHTML = '<div style="padding: 10px; color: #94a3b8; font-size: 11px; text-align: center;">No commands yet. Create one below!</div>';
+            } else {
+                state.commands.forEach((cmd, idx) => {
+                    const item = document.createElement('div');
+                    item.className = 'enchanted-manager-item';
+                    item.innerHTML = `
+                        <div class="enchanted-manager-info">
+                            <span class="enchanted-manager-name">${cmd.name}</span>
+                            <span class="enchanted-manager-prompt">${cmd.prompt}</span>
+                        </div>
+                        <button class="enchanted-manager-delete" data-index="${idx}" title="Delete">${Icons.trash}</button>
+                    `;
+                    item.querySelector('.enchanted-manager-delete').onclick = () => {
+                        state.commands.splice(idx, 1);
+                        chrome.storage.local.set({ enchantedCommands: state.commands }, renderManagerList);
+                    };
+                    listContainer.appendChild(item);
+                });
+            }
+        };
+
+        modal.innerHTML = `
+            <div class="enchanted-manager-header">
+                <span class="enchanted-manager-title">Manage Commands</span>
+                <button id="enchanted-manager-modal-close" title="Close">${Icons.close}</button>
+            </div>
+            <div class="enchanted-manager-list"></div>
+            <div class="enchanted-manager-form">
+                <input type="text" class="enchanted-manager-input cmd-name-in" placeholder="/name (ex: /fix)">
+                <input type="text" class="enchanted-manager-input cmd-prompt-in" placeholder="Prompt text...">
+                <button class="enchanted-manager-add-btn">Add Command</button>
+            </div>
+        `;
+
+        renderManagerList();
+
+        modal.querySelector('#enchanted-manager-modal-close').onclick = () => modal.classList.remove('visible');
+
+        modal.querySelector('.enchanted-manager-add-btn').onclick = () => {
+            const nameIn = modal.querySelector('.cmd-name-in');
+            const promptIn = modal.querySelector('.cmd-prompt-in');
+            const name = nameIn.value.trim();
+            const prompt = promptIn.value.trim();
+
+            if (name && prompt) {
+                const finalName = name.startsWith('/') ? name : '/' + name;
+                state.commands.push({ name: finalName, prompt });
+                chrome.storage.local.set({ enchantedCommands: state.commands }, () => {
+                    renderManagerList();
+                    nameIn.value = '';
+                    promptIn.value = '';
+                });
+            }
+        };
+
+        modal.classList.add('visible');
+
+        // Hide modal when clicking far outside
+        const hideManagerModal = (e) => {
+            if (modal.classList.contains('visible') && !modal.contains(e.target)) {
+                modal.classList.remove('visible');
+                document.removeEventListener('click', hideManagerModal);
+            }
+        };
+        setTimeout(() => document.addEventListener('click', hideManagerModal), 10);
+    };
+
+    const showCommandsModal = (textarea, filter = '') => {
+        let modal = document.getElementById('enchanted-commands-modal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'enchanted-commands-modal';
+            document.body.appendChild(modal);
+        }
+
+        const rect = textarea.getBoundingClientRect();
+        modal.style.left = `${rect.left}px`;
+        modal.style.bottom = `${window.innerHeight - rect.top + 10}px`;
+
+        modal.innerHTML = '';
+        const allCommands = state.commands || [];
+        const filtered = filter
+            ? allCommands.filter(c => c.name.toLowerCase().includes(filter.toLowerCase()))
+            : allCommands;
+
+        if (filtered.length === 0) {
+            modal.innerHTML = `<div style="padding: 10px; color: #94a3b8; font-size: 12px; text-align: center;">${filter ? 'No commands match "' + filter + '"' : 'No commands saved.'}</div>`;
+        } else {
+            filtered.forEach(cmd => {
+                const item = document.createElement('div');
+                item.className = 'enchanted-command-item';
+                item.innerHTML = `
+                    <span class="enchanted-command-name">${cmd.name}</span>
+                    <span class="enchanted-command-prompt">${cmd.prompt}</span>
+                `;
+                item.onclick = (e) => {
+                    e.stopPropagation();
+                    const currentVal = textarea.value;
+                    const words = currentVal.split(' ');
+                    // Replace the word that starts with /
+                    const slashIndex = words.findIndex(w => w.startsWith('/'));
+                    if (slashIndex !== -1) {
+                        words[slashIndex] = cmd.prompt;
+                        injectTextIntoAngular(textarea, words.join(' '));
+                    } else {
+                        const newVal = currentVal ? currentVal + ' ' + cmd.prompt : cmd.prompt;
+                        injectTextIntoAngular(textarea, newVal);
+                    }
+                    modal.classList.remove('visible');
+                    textarea.focus();
+                };
+                modal.appendChild(item);
+            });
+        }
+
+        // Add "Manage Commands" button at the bottom
+        const manageItem = document.createElement('div');
+        manageItem.className = 'enchanted-command-item manage-trigger';
+        manageItem.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 8px; color: #3b82f6;">
+                <span style="display: flex; align-items: center; justify-content: center; width: 16px; height: 16px;">${Icons.plusCircle}</span>
+                <span style="font-weight: 700; font-size: 16px;">Manage Slash Commands</span>
+            </div>
+        `;
+        manageItem.onclick = (e) => {
+            e.stopPropagation();
+            modal.classList.remove('visible');
+            showCommandManagerModal();
+        };
+        modal.appendChild(manageItem);
+
+        modal.classList.add('visible');
+
+        // Auto-select first item
+        const items = modal.querySelectorAll('.enchanted-command-item');
+        if (items.length > 0) {
+            items[0].classList.add('selected');
+        }
+
+        // Hide modal when clicking outside
+        const hideModal = (e) => {
+            if (!modal.contains(e.target)) {
+                modal.classList.remove('visible');
+                document.removeEventListener('click', hideModal);
+            }
+        };
+        setTimeout(() => document.addEventListener('click', hideModal), 10);
+    };
+
+    const handleTextareaInput = (e) => {
+        const value = e.target.value;
+        const words = value.split(' ');
+        const activeWord = words[words.length - 1];
+
+        if (activeWord.startsWith('/') && !activeWord.includes(' ', 1)) {
+            showCommandsModal(e.target, activeWord.substring(1));
+        } else {
+            const modal = document.getElementById('enchanted-commands-modal');
+            if (modal) modal.classList.remove('visible');
+        }
+    };
+
+    let isRecording = false;
+    const handleAltPushToTalk = (e) => {
+        if (!state.extensionEnabled) return;
+
+        if (e.key === 'Alt') {
+            const micBtn = document.querySelector('button[aria-label="Speech to text"]');
+            if (!micBtn) return;
+
+            if (e.type === 'keydown' && !isRecording) {
+                e.preventDefault();
+                isRecording = true;
+                micBtn.click();
+                console.log("🎤 Recording started (Alt hold)");
+            } else if (e.type === 'keyup' && isRecording) {
+                isRecording = false;
+                micBtn.click();
+                console.log("🎤 Recording stopped (Alt release)");
+            }
+        }
+    };
+
     const handleKeydown = (e) => {
+        const modal = document.getElementById('enchanted-commands-modal');
+        const isModalVisible = modal && modal.classList.contains('visible');
+
+        if (isModalVisible) {
+            const items = Array.from(modal.querySelectorAll('.enchanted-command-item'));
+            let selectedIndex = items.findIndex(item => item.classList.contains('selected'));
+
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                e.stopPropagation();
+                if (selectedIndex !== -1) {
+                    items[selectedIndex].click();
+                } else if (items.length > 0) {
+                    items[0].click();
+                }
+                return;
+            }
+
+            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (items.length === 0) return;
+
+                items.forEach(item => item.classList.remove('selected'));
+
+                if (e.key === 'ArrowDown') {
+                    selectedIndex = (selectedIndex + 1) % items.length;
+                } else {
+                    selectedIndex = (selectedIndex - 1 + items.length) % items.length;
+                }
+
+                items[selectedIndex].classList.add('selected');
+                items[selectedIndex].scrollIntoView({ block: 'nearest' });
+                return;
+            }
+
+            if (e.key === 'Escape') {
+                modal.classList.remove('visible');
+                return;
+            }
+        }
+
         if (e.key === 'Enter' && !e.shiftKey) {
-            // Check if AI is processing
+            // Check if extension is enabled
+            if (!state.extensionEnabled) return;
+
             const sendBtn = document.querySelector(SELECTORS.sendButton);
             if (!sendBtn) return;
 
@@ -250,8 +547,9 @@ User Message:
                                !!document.querySelector(SELECTORS.runningIcon) ||
                                !!document.querySelector('button.stop-button, ms-stop-button, .stop-icon');
 
-            if (isProcessing) {
-                console.log("⌨️ Intercepted Enter while processing -> Adding to queue");
+            // If Question Mode is ON OR AI is processing, we ALWAYS use the queue
+            if (state.questionMode || isProcessing) {
+                console.log("⌨️ Intercepted Enter (Queue/Question Mode) -> Adding to queue");
                 e.preventDefault();
                 e.stopPropagation();
                 addFromChatToQueue();
@@ -259,22 +557,64 @@ User Message:
         }
     };
 
+    const handleNativeSendClick = (e) => {
+        // Only intercept if extension is enabled AND it's a real user click (e.isTrusted)
+        // This prevents intercepting our own programmatic clicks from the loop
+        if (!state.extensionEnabled || !e.isTrusted) return;
+
+        if (state.questionMode) {
+            console.log("🖱️ Intercepted User Send Click (Question Mode) -> Adding to queue instead");
+            e.preventDefault();
+            e.stopPropagation();
+            addFromChatToQueue();
+        }
+    };
+
     const injectAddToQueueButton = () => {
         const textarea = document.querySelector(SELECTORS.textarea);
         if (textarea && !textarea.dataset.enchantedListener) {
             textarea.addEventListener('keydown', handleKeydown, true);
+            window.addEventListener('keydown', handleAltPushToTalk, true);
+            window.addEventListener('keyup', handleAltPushToTalk, true);
+            textarea.addEventListener('input', handleTextareaInput);
+            textarea.addEventListener('click', () => {
+                const modal = document.getElementById('enchanted-commands-modal');
+                if (modal) modal.classList.remove('visible');
+            });
             textarea.dataset.enchantedListener = 'true';
         }
 
         const sendBtn = document.querySelector(SELECTORS.sendButton);
         if (!sendBtn || !sendBtn.parentNode) return;
 
+        // Attach listener to native send button to intercept if Question Mode is ON
+        if (!sendBtn.dataset.enchantedInterceptor) {
+            sendBtn.addEventListener('click', handleNativeSendClick, true);
+            sendBtn.dataset.enchantedInterceptor = 'true';
+        }
+
+        // 0.1 Inject Command Button (/)
+        if (!document.getElementById(COMMAND_MODE_BTN_ID)) {
+             const cBtn = document.createElement('button');
+             cBtn.id = COMMAND_MODE_BTN_ID;
+             cBtn.type = 'button';
+             cBtn.title = 'Slash Commands';
+             cBtn.className = 'enchanted-chat-btn';
+             cBtn.textContent = '/';
+             cBtn.onclick = (e) => {
+                 e.preventDefault();
+                 e.stopPropagation();
+                 showCommandsModal(textarea);
+             };
+             sendBtn.parentNode.insertBefore(cBtn, sendBtn);
+        }
         // 1. Inject Question Mode Button
         if (!document.getElementById(QUESTION_MODE_BTN_ID)) {
              const qBtn = document.createElement('button');
              qBtn.id = QUESTION_MODE_BTN_ID;
              qBtn.type = 'button';
-             qBtn.title = 'Modo Dúvida (Não gera código)';
+             qBtn.className = 'enchanted-chat-btn';
+             qBtn.title = 'Question Mode (No Code)';
              qBtn.textContent = '?';
              qBtn.onclick = (e) => {
                  e.preventDefault();
@@ -285,15 +625,17 @@ User Message:
              sendBtn.parentNode.insertBefore(qBtn, sendBtn);
         }
 
+
         // 2. Inject Add Queue Button
         if (document.getElementById(ADD_TO_QUEUE_BTN_ID)) return;
 
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.id = ADD_TO_QUEUE_BTN_ID;
-        btn.title = 'Adicionar comando à fila';
-        btn.setAttribute('aria-label', 'Adicionar comando à fila');
-        btn.className = 'enchanted-add-to-queue-btn';
+        btn.title = 'Add to Queue';
+        btn.setAttribute('aria-label', 'Add to Queue');
+        btn.className = 'enchanted-chat-btn';
+        btn.style.borderRadius = '50% !important';
         btn.innerHTML = `<span class="enchanted-add-to-queue-icon">${Icons.send}</span>`;
         btn.onclick = (e) => {
             e.preventDefault();
@@ -521,16 +863,92 @@ User Message:
         }
     };
 
-    // Init (Delay to ensure page load)
-    setTimeout(() => {
+    const removeUI = () => {
+        console.log("🧹 Removing Enchanted UI...");
+
+        // remove summ logic
+        const elementsToRemove = [
+            'enchanted-panel',
+            QUESTION_MODE_BTN_ID,
+            COMMAND_MODE_BTN_ID,
+            FOCUS_MODE_BTN_ID,
+            'enchanted-commands-modal',
+            ADD_TO_QUEUE_BTN_ID,
+            COFFEE_BTN_ID
+        ];
+
+        elementsToRemove.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.remove();
+        });
+
+        // Revert message styles
+        document.querySelectorAll('.enchanted-question-bubble').forEach(msg => {
+            msg.classList.remove('enchanted-question-bubble');
+        });
+
+        // Remove listeners from native elements
+        const textarea = document.querySelector(SELECTORS.textarea);
+        if (textarea) {
+            textarea.removeEventListener('keydown', handleKeydown, true);
+            textarea.removeEventListener('input', handleTextareaInput);
+            delete textarea.dataset.enchantedListener;
+        }
+
+        const sendBtn = document.querySelector(SELECTORS.sendButton);
+        if (sendBtn) {
+            sendBtn.removeEventListener('click', handleNativeSendClick, true);
+            delete sendBtn.dataset.enchantedInterceptor;
+        }
+    };
+
+    const cleanupChatMessages = () => {
+        if (!state.extensionEnabled) return;
+
+        // Search for messages containing our prefix
+        const messages = document.querySelectorAll('.model-request-component, ms-chat-breakpoint, .user-message-content');
+        messages.forEach(msg => {
+            if (msg.textContent.includes(QUESTION_PROMPT_PREFIX)) {
+                // Apply visual question style
+                msg.classList.add('enchanted-question-bubble');
+
+                // Remove prefix visually if it's still there
+                const walker = document.createTreeWalker(msg, NodeFilter.SHOW_TEXT, null, false);
+                let node;
+                while (node = walker.nextNode()) {
+                    if (node.nodeValue.includes(QUESTION_PROMPT_PREFIX)) {
+                        node.nodeValue = node.nodeValue.replace(QUESTION_PROMPT_PREFIX, '');
+                    }
+                }
+            }
+        });
+    };
+
+    const init = () => {
+        if (!state.extensionEnabled) return;
         createEnchantedUI();
         injectAddToQueueButton();
         injectCoffeeButton();
+    };
+
+    // Init (Delay to ensure page load)
+    setTimeout(() => {
+        init();
         setInterval(() => {
-            ensureQueuePanel();
-            injectAddToQueueButton();
-            injectCoffeeButton();
-        }, 3000);
+            if (state.extensionEnabled) {
+                ensureQueuePanel();
+                injectAddToQueueButton();
+                injectCoffeeButton();
+                cleanupChatMessages();
+
+                // Patch Mic Tooltip
+                const micBtn = document.querySelector('button[aria-label="Speech to text"]');
+                if (micBtn && !micBtn.dataset.enchantedTooltip) {
+                    micBtn.title = 'Speech to text [Hold Alt]';
+                    micBtn.dataset.enchantedTooltip = 'true';
+                }
+            }
+        }, 2000);
     }, 2500);
 
 })();

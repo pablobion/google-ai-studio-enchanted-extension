@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #a855f7;
+            --primary-glow: rgba(168, 85, 247, 0.4);
+            --bg: #0c0d12;
+            --card-bg: rgba(21, 23, 30, 0.8);
+            --text: #f8fafc;
+            --text-dim: #94a3b8;
+            --border: rgba(255, 255, 255, 0.08);
+            --accent: #ec4899;
+        }
+
+        body {
+            width: 320px;
+            padding: 0;
+            margin: 0;
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'Outfit', sans-serif;
+            overflow: hidden;
+        }
+
+        .main-container {
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 4px;
+        }
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 36px;
+            height: 36px;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            box-shadow: 0 0 15px var(--primary-glow);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); box-shadow: 0 0 15px var(--primary-glow); }
+            50% { transform: scale(1.05); box-shadow: 0 0 25px var(--primary-glow); }
+            100% { transform: scale(1); box-shadow: 0 0 15px var(--primary-glow); }
+        }
+
+        .header h1 {
+            font-size: 18px;
+            margin: 0;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+            background: linear-gradient(to right, #fff, #a855f7);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .status-badge {
+            font-size: 10px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 2px 8px;
+            border-radius: 99px;
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-dim);
+            border: 1px solid var(--border);
+        }
+
+        .status-badge.active {
+            color: var(--primary);
+            border-color: var(--primary);
+            background: rgba(168, 85, 247, 0.1);
+        }
+
+        .main-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            padding: 16px;
+            backdrop-filter: blur(12px);
+        }
+
+        .toggle-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .toggle-info h2 {
+            font-size: 14px;
+            margin: 0;
+            font-weight: 600;
+        }
+
+        .toggle-info p {
+            font-size: 11px;
+            margin: 4px 0 0 0;
+            color: var(--text-dim);
+        }
+
+        /* Switch Styling */
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 48px;
+            height: 26px;
+        }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #27272a;
+            transition: .3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 24px;
+            border: 1px solid var(--border);
+        }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 3px;
+            bottom: 3px;
+            background-color: #71717a;
+            transition: .3s cubic-bezier(0.4, 0, 0.2, 1);
+            border-radius: 50%;
+        }
+
+        input:checked + .slider {
+            background-color: rgba(168, 85, 247, 0.2);
+            border-color: var(--primary);
+        }
+
+        input:checked + .slider:before {
+            transform: translateX(22px);
+            background-color: var(--primary);
+            box-shadow: 0 0 10px var(--primary-glow);
+        }
+
+        /* Options Section (Dynamic) */
+        .options-section {
+            display: none;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border);
+            animation: slideDown 0.3s ease-out;
+        }
+
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .options-section.visible {
+            display: flex;
+        }
+
+        .option-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 12px;
+            transition: background 0.2s;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .option-item:hover {
+            background: rgba(255, 255, 255, 0.06);
+        }
+
+        .option-icon {
+            width: 28px;
+            height: 28px;
+            border-radius: 8px;
+            background: rgba(168, 85, 247, 0.1);
+            color: var(--primary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+
+        .option-text {
+            flex: 1;
+        }
+
+        .option-title {
+            font-size: 13px;
+            font-weight: 600;
+            display: block;
+        }
+
+        .option-desc {
+            font-size: 10px;
+            color: var(--text-dim);
+            display: block;
+        }
+
+        .footer {
+            padding: 12px 20px;
+            text-align: center;
+            font-size: 10px;
+            color: var(--text-dim);
+            background: rgba(0, 0, 0, 0.2);
+            border-top: 1px solid var(--border);
+        }
+
+        .credit {
+            font-weight: 700;
+            color: var(--primary);
+            text-decoration: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="main-container">
+        <header class="header">
+            <div class="logo-section">
+                <div class="logo-icon">✨</div>
+                <h1>Enchanted</h1>
+            </div>
+            <div id="status-badge" class="status-badge">Off</div>
+        </header>
+
+        <div class="main-card">
+            <div class="toggle-row">
+                <div class="toggle-info">
+                    <h2>Features</h2>
+                    <p>Enable extension tools</p>
+                </div>
+                <label class="switch">
+                    <input type="checkbox" id="extension-toggle">
+                    <span class="slider"></span>
+                </label>
+            </div>
+
+        </div>
+
+        <!-- Support outside card -->
+        <div style="margin-top: 16px; padding: 0 4px;">
+            <a href="https://buymeacoffee.com/bionlabs" target="_blank" class="option-item">
+                <div class="option-icon">☕</div>
+                <div class="option-text">
+                    <span class="option-title">Support Project</span>
+                    <span class="option-desc">Buy me a coffee</span>
+                </div>
+            </a>
+        </div>
+    </div>
+
+    <footer class="footer">
+        v1.1.0 • <a href="#" class="credit">Bion Labs</a> • ✨ Google AI Studio
+    </footer>
+
+    <script src="popup.js"></script>
+</body>
+</html>
